@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>ぎんなんを潰せゲーム</title>
+    <style>
+        body {
+            text-align: center;
+            background: #f0f0f0;
+        }
+        canvas {
+            border: 2px solid #333;
+        }
+        /* ミュートボタンのスタイル */
+        #muteButton {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgb(57, 59, 143);
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+        }
+        #muteButton i {
+            font-size: 24px;
+            color: #eff5ff;
+        }
+        #muteButton:focus {
+            outline: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>ぎんなんを潰せ</h1>
+    <p>スコア：<span id="score">0</span>
+        <br>黄色のボールをクリックして消そう　青色は消せないよ</p>
+    
+    <!-- ミュートボタン -->
+    <button id="muteButton">
+        <i id="muteIcon" class="fas fa-volume-mute"></i>
+    </button>
+    
+    <!-- Font Awesomeの読み込み（最新版） -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+    <!-- BGM -->
+    <audio id="bgm" loop>
+        <source src="GinNan.mp3" type="audio/mp3">
+        Your browser does not support the audio element.
+    </audio>
+    
+    <!-- 効果音 -->
+    <audio id="clickSound">
+        <source src="Nyu.mp3" type="audio/mp3">
+        Your browser does not support the audio element.
+    </audio>
+    
+    <canvas id="gameCanvas" width="800" height="550"></canvas>
+    
+    <script>
+// BGMと効果音要素の取得
+const bgm = document.getElementById("bgm");
+const clickSound = document.getElementById("clickSound");
+const muteButton = document.getElementById("muteButton");
+const muteIcon = document.getElementById("muteIcon");
+
+// 最初はミュート状態に設定
+bgm.muted = true;
+clickSound.muted = true;  // 効果音もミュート
+muteIcon.classList.remove("fa-volume-up");
+muteIcon.classList.add("fa-volume-mute");
+
+// ミュートボタンのクリックイベント
+muteButton.addEventListener("click", function() {
+    if (bgm.muted) {
+        bgm.muted = false;
+        clickSound.muted = false;  // 効果音もアンミュート
+        muteIcon.classList.remove("fa-volume-mute");
+        muteIcon.classList.add("fa-volume-up");
+        bgm.play();  // ユーザーがクリックしたときに音を再生
+    } else {
+        bgm.muted = true;
+        clickSound.muted = true;  // 効果音もミュート
+        muteIcon.classList.remove("fa-volume-up");
+        muteIcon.classList.add("fa-volume-mute");
+    }
+});
+
+        // キャンバスのセットアップ
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        let balls = [];
+        let timeLeft = 30;
+        let gameOver = false;
+        let score = 0;
+
+        // ボール作成関数
+        function createBall() {
+            let ball = {
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                radius: 10 + Math.random() * 30,
+                color: Math.random() > 0.5 ? "#3498db" : "yellow",
+                dx: (Math.random() - 0.5) * 4,
+                dy: (Math.random() - 0.5) * 4
+            };
+            balls.push(ball);
+        }
+
+        canvas.addEventListener("click", function(event) {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = event.clientX - rect.left;
+            const mouseY = event.clientY - rect.top;
+
+            for (let i = 0; i < balls.length; i++) {
+                const ball = balls[i];
+                const distance = Math.sqrt((mouseX - ball.x) ** 2 + (mouseY - ball.y) ** 2);
+
+                if (distance <= ball.radius + 5 && ball.color === "yellow") {
+                    balls.splice(i, 1);
+                    score++;
+                    document.getElementById("score").textContent = score;
+                    clickSound.play();  // クリック時に効果音を再生
+                    break;
+                }
+            }
+        });
+
+        function startTimer() {
+            setInterval(() => {
+                if (!gameOver) {
+                    timeLeft--;
+                    if (timeLeft <= 0) {
+                        gameOver = true;
+                        alert("時間切れ！あなたのスコアは" + score + "です");
+                    }
+                }
+            }, 1000);
+        }
+
+        function draw() {
+            if (gameOver) {
+                return;
+            }
+
+            ctx.fillStyle = "skyblue";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            for (let i = 0; i < balls.length; i++) {
+                const ball = balls[i];
+                ctx.beginPath();
+                ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+                ctx.fillStyle = ball.color;
+                ctx.fill();
+                ctx.closePath();
+            }
+
+            ctx.font = "30px Arial";
+            ctx.fillStyle = "black";
+            ctx.fillText("残り時間: " + timeLeft + "秒", 20, 50);
+
+            for (let ball of balls) {
+                ball.x += ball.dx;
+                ball.y += ball.dy;
+
+                if (ball.x + ball.radius > canvas.width || ball.x - ball.radius < 0) {
+                    ball.dx = -ball.dx;
+                }
+                if (ball.y + ball.radius > canvas.height || ball.y - ball.radius < 0) {
+                    ball.dy = -ball.dy;
+                }
+            }
+
+            requestAnimationFrame(draw);
+        }
+
+        startTimer();
+        setInterval(createBall, 500);
+        draw();
+    </script>
+</body>
+</html>
